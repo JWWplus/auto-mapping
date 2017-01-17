@@ -31,7 +31,7 @@ angular.module('WebApp')
         templateUrl:'templates/log.html',
         controller:'LogCtr'
     });
-}).run(function($state, $rootScope, $http, $cookieStore){
+}).run(function($state, $rootScope, $http, $cookieStore, AuthService){
     //初始化全局函数
     $rootScope.AppVersion = '';
     $rootScope.event = '';
@@ -40,20 +40,29 @@ angular.module('WebApp')
     $rootScope.currentPage = 1;
     $rootScope.username = '';
     $rootScope.userrole = '';
-    $rootScope.globals = $cookieStore.get('globals') || {};
-    if ($rootScope.globals.currentUser) {
-        $http.defaults.headers.common['Authorization'] = 'Basic ' + $rootScope.globals.currentUser.authdata; // jshint ignore:line
-        $rootScope.username = $rootScope.globals.currentUser.username;
-        $rootScope.role = $rootScope.globals.currentUser.role;
+    $rootScope.globals = AuthService.get({}, function () {
+        if ($rootScope.globals.is_login) {
+        $rootScope.username = $rootScope.globals.username;
+        $rootScope.role = $rootScope.globals.role;
         $state.go('DataList')
     }
-    else {
-        $state.go('Login');
-    }
-
-    $rootScope.$on('stateChangeStart', function (event, toState, fromState) {
-        if (toState.name != 'Login' && !$rootScope.globals.currentUser){
+        else {
             $state.go('Login');
         }
+        console.log($rootScope.globals)
+    });
+
+
+    $rootScope.$on('stateChangeStart', function (event, toState, fromState, AuthService) {
+        status = AuthService.get({}, function () {
+            if (toState.name != 'Login' && !status.is_login){
+            $state.go('Login');
+        }
+            else {
+                $rootScope.username = status.username;
+                $rootScope.role = status.role;
+            }
+        });
+
     })
 });

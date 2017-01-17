@@ -5,7 +5,7 @@
 按照json格式返回的数据一定要是字符串   否则 AngularJs 解析出错
 a=datawebunit.datainfo.aggregate([{'$match':{'appversion':"4.13"}},{"$group":{"_id":"$page",'sum':{'$sum':1}}}])
 """
-from flask import Flask, request, send_file, jsonify
+from flask import Flask, request, send_file, jsonify, session
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import func
 from flask.ext.basicauth import BasicAuth
@@ -13,6 +13,7 @@ import logging
 import json
 import sys
 import os
+from datetime import timedelta
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
@@ -44,6 +45,14 @@ def after_request(response):
                          'Content-Type,Authorization')
     response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE')
     return response
+
+
+# 设置session的有效时间 45分钟
+# By default in Flask, permanent_session_lifetime is set to 31 days.
+@app.before_request
+def before_request():
+    session.permanent = True
+    app.permanent_session_lifetime = timedelta(minutes=45)
 
 
 class Appversion(db.Model):
@@ -465,11 +474,41 @@ def check_passwd():
                 'status': 1,
                 'role': check_from_db.role
             }
+            session['is_login'] = True
+            session['user'] = username
+            session['role'] = check_from_db.role
         else:
             result = {
                 'status': -1,
             }
         return jsonify(result)
+
+
+# 用户刷新或者切换页面时的监听函数
+@app.route('/api/v1/status')
+def check_status():
+    if session.get('is_login'):
+        if session['is_login']:
+            return jsonify({
+                'is_login': True,
+                'username': session['user'],
+                'role': session['role']
+            })
+    else:
+        return jsonify({
+            'is_login': False
+        })
+
+
+# 用户推出登录函数
+@app.route('/api/v1/logout')
+def logout():
+    session.pop('is_login', None)
+    session.pop('user', None)
+    session.pop('role', None)
+    return jsonify({
+        'result': True
+    })
 
 
 # 像数据库插入log记录

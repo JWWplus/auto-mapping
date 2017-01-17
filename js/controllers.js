@@ -174,11 +174,13 @@ angular.module('WebCtr', ['ui.bootstrap']).controller('DataListCtr', function (
             });
         }
     }
-}).controller('LoginCtr', function ($scope,$rootScope,$state,CheckPass,popupService,Base64,$cookieStore,$http) {
+}).controller('LoginCtr', function ($scope,$rootScope,$state,CheckPass,popupService,AuthService,logout) {
     $scope.username = '';
     $scope.password = '';
     $scope.userrole = '';
     $rootScope.username = '';
+    //跳转到登录页面自动清空
+    logout.get();
     //登陆按钮函数
     $scope.login =function () {
         $scope.LoginInfo = new CheckPass();
@@ -191,36 +193,12 @@ angular.module('WebCtr', ['ui.bootstrap']).controller('DataListCtr', function (
                 popupService.showPopup('用户名/密码不正确 请重新输入！')
             }
             else {
-                $scope.SetCredentials($scope.username, $scope.password, result.role);
-                $rootScope.username = $scope.username;
                 $rootScope.userrole = result.role;
+                $rootScope.username = $scope.username;
                 $state.go('DataList')
             }
         });
     };
-    //保存参数到cookies 并建立Auth
-    $scope.SetCredentials = function (username, password, role) {
-        var authdata = Base64.encode(username + ':' + password + ":" + role);
-
-        $rootScope.globals = {
-            currentUser: {
-                username: username,
-                role: role,
-                authdata: authdata
-            }
-        };
-
-        $http.defaults.headers.common['Authorization'] = 'Basic ' + authdata; // jshint ignore:line
-        $cookieStore.put('globals', $rootScope.globals);
-    };
-    //清除cookies
-    $scope.ClearCredentials = function () {
-        $rootScope.globals = {};
-        $cookieStore.remove('globals');
-        $http.defaults.headers.common.Authorization = 'Basic ';
-    };
-    //跳转到登录页面自动清空
-    $scope.ClearCredentials();
 }).controller('LogCtr', function ($scope, $rootScope, popupService, $state, LoginfoByPage) {
     $scope.maxSize = 10;
     $scope.numPerPage = 50;
